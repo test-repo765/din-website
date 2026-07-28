@@ -29,12 +29,16 @@ async function mouseEnterHandler(
     popoverElement.classList.add("active-popover")
     setPosition(popoverElement as HTMLElement)
 
+    const popoverInnerEl = popoverElement.querySelector(".popover-inner") as HTMLElement | null
+    if (!popoverInnerEl) return
+
     if (hash !== "") {
-      const targetAnchor = `#popover-internal-${hash.slice(1)}`
-      const heading = popoverInner.querySelector(targetAnchor) as HTMLElement | null
+      const targetId = hash.slice(1) // strip the leading #
+      const targetAnchor = `#popover-internal-${targetId}`
+      const heading = popoverInnerEl.querySelector(targetAnchor) as HTMLElement | null
       if (heading) {
         // leave ~12px of buffer when scrolling to a heading
-        popoverInner.scroll({ top: heading.offsetTop - 12, behavior: "instant" })
+        popoverInnerEl.scroll({ top: heading.offsetTop - 12, behavior: "instant" })
       }
     }
   }
@@ -43,7 +47,7 @@ async function mouseEnterHandler(
   const hash = decodeURIComponent(targetUrl.hash)
   targetUrl.hash = ""
   targetUrl.search = ""
-  const popoverId = `popover-${link.pathname}`
+  const popoverId = `popover-${link.pathname}${hash ? hash : ""}`
   const prevPopoverElement = document.getElementById(popoverId)
 
   // dont refetch if there's already a popover
@@ -99,6 +103,42 @@ async function mouseEnterHandler(
       const elts = [...html.getElementsByClassName("popover-hint")]
       if (elts.length === 0) return
 
+      // If linking to a block reference, isolate that block in the popover
+      if (hash !== "") {
+        const targetId = hash.slice(1) // strip the leading #
+        const targetAnchor = `popover-internal-${targetId}`
+        // Try to find the referenced element
+        for (const elt of elts) {
+          const targetEl = elt.querySelector(`#${targetAnchor}`) as HTMLElement | null
+          if (targetEl) {
+            // Found the block — show only it (plus its parent heading if it's a paragraph)
+            const isolated = document.createElement("div")
+            isolated.classList.add("popover-hint")
+            // If the target is a paragraph (block ref), show just that paragraph
+            // If it's a heading, show the heading and its following content
+            if (targetEl.tagName === "H1" || targetEl.tagName === "H2" || targetEl.tagName === "H3" ||
+                targetEl.tagName === "H4" || targetEl.tagName === "H5" || targetEl.tagName === "H6") {
+              // It's a heading — show the heading and following siblings until the next heading
+              isolated.appendChild(targetEl.cloneNode(true))
+              let next = targetEl.nextElementSibling
+              while (next && !next.tagName.match(/^H[1-6]$/)) {
+                isolated.appendChild(next.cloneNode(true))
+                next = next.nextElementSibling
+              }
+            } else {
+              // It's a block (paragraph, etc.) — show just that element
+              isolated.appendChild(targetEl.cloneNode(true))
+            }
+            popoverInner.appendChild(isolated)
+            document.body.appendChild(popoverElement)
+            if (activeAnchor !== this) return
+            showPopover(popoverElement)
+            return
+          }
+        }
+      }
+
+      // No block reference or block not found — show the whole page
       elts.forEach((elt) => popoverInner.appendChild(elt))
   }
 
