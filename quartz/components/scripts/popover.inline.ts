@@ -160,14 +160,53 @@ function clearActivePopover() {
   allPopoverElements.forEach((popoverElement) => popoverElement.classList.remove("active-popover"))
 }
 
+// Check if a link points to the glossary (Lugat)
+// Uses Quartz's data-slug attribute which marks the target page
+function isGlossaryLink(link: HTMLAnchorElement): boolean {
+  return link.dataset.slug === "Lugat"
+}
+
+// Detect touch device (no reliable hover capability)
+function isTouchDevice(): boolean {
+  return window.matchMedia("(hover: none)").matches
+}
+
 document.addEventListener("nav", () => {
   const links = [...document.querySelectorAll("a.internal")] as HTMLAnchorElement[]
+  const touch = isTouchDevice()
+
   for (const link of links) {
-    link.addEventListener("mouseenter", mouseEnterHandler)
-    link.addEventListener("mouseleave", clearActivePopover)
+    if (touch) {
+      // On touch devices: only intercept glossary links, skip hover handlers entirely
+      link.addEventListener("click", (e: MouseEvent) => {
+        if (isGlossaryLink(link)) {
+          e.preventDefault()
+          e.stopPropagation()
+          // Clear any existing popover first
+          clearActivePopover()
+          // Show popover at a sensible position on screen
+          mouseEnterHandler.call(link, { clientX: window.innerWidth / 2, clientY: window.innerHeight / 3 })
+        }
+      })
+    } else {
+      // On desktop: use hover-based popovers as before
+      link.addEventListener("mouseenter", mouseEnterHandler)
+      link.addEventListener("mouseleave", clearActivePopover)
+    }
+
     window.addCleanup(() => {
       link.removeEventListener("mouseenter", mouseEnterHandler)
       link.removeEventListener("mouseleave", clearActivePopover)
     })
+  }
+
+  // Dismiss popover when tapping anywhere outside it (mobile only)
+  if (touch) {
+    document.addEventListener("click", (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest(".popover") && !target.closest("a.internal")) {
+        clearActivePopover()
+      }
+    }, true)
   }
 })
