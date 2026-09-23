@@ -160,53 +160,63 @@ function clearActivePopover() {
   allPopoverElements.forEach((popoverElement) => popoverElement.classList.remove("active-popover"))
 }
 
-// Check if a link points to the glossary (Lugat)
-// Uses Quartz's data-slug attribute which marks the target page
-function isGlossaryLink(link: HTMLAnchorElement): boolean {
-  return link.dataset.slug === "Lugat"
-}
+/** Touch devices have no hover, so the popover is opened by tapping instead. */
+const isTouchPrimary = () => window.matchMedia("(hover: none)").matches
 
-// Detect touch device (no reliable hover capability)
-function isTouchDevice(): boolean {
-  return window.matchMedia("(hover: none)").matches
-}
+/**
+ * The link whose popover was opened by a tap. The first tap on a
+ * [[Lugat#term]] link shows the definition; tapping the same link again lets
+ * the navigation through, so the full glossary page is still reachable.
+ */
+let shownByTouch: HTMLAnchorElement | null = null
 
 document.addEventListener("nav", () => {
+  shownByTouch = null
   const links = [...document.querySelectorAll("a.internal")] as HTMLAnchorElement[]
-  const touch = isTouchDevice()
 
   for (const link of links) {
-    if (touch) {
-      // On touch devices: only intercept glossary links, skip hover handlers entirely
-      link.addEventListener("click", (e: MouseEvent) => {
-        if (isGlossaryLink(link)) {
-          e.preventDefault()
-          e.stopPropagation()
-          // Clear any existing popover first
-          clearActivePopover()
-          // Show popover at a sensible position on screen
-          mouseEnterHandler.call(link, { clientX: window.innerWidth / 2, clientY: window.innerHeight / 3 })
-        }
-      })
-    } else {
-      // On desktop: use hover-based popovers as before
-      link.addEventListener("mouseenter", mouseEnterHandler)
-      link.addEventListener("mouseleave", clearActivePopover)
+    // Hover (mouse / trackpad): upstream behaviour, unchanged.
+    const onMouseEnter = (event: MouseEvent) => {
+      if (isTouchPrimary()) return
+      void mouseEnterHandler.call(link, event)
+    }
+    const onMouseLeave = () => clearActivePopover()
+
+    /**
+     * Tap (phone / tablet). Only links that point at a specific heading or
+     * block open a popover — those are the [[Lugat#term]] glossary links.
+     * Everything else, including the hymn-to-hymn links and every navigation
+     * link, has no fragment and keeps navigating on the first tap.
+     */
+    const onClick = (event: MouseEvent) => {
+      if (!isTouchPrimary() || event.defaultPrevented) return
+      if (link.hash === "" || link.dataset.noPopover === "true") return
+      if (shownByTouch === link) {
+        shownByTouch = null
+        return // second tap: let the router navigate
+      }
+      event.preventDefault()
+      shownByTouch = link
+      void mouseEnterHandler.call(link, { clientX: event.clientX, clientY: event.clientY })
     }
 
+    link.addEventListener("mouseenter", onMouseEnter)
+    link.addEventListener("mouseleave", onMouseLeave)
+    link.addEventListener("click", onClick)
     window.addCleanup(() => {
-      link.removeEventListener("mouseenter", mouseEnterHandler)
-      link.removeEventListener("mouseleave", clearActivePopover)
+      link.removeEventListener("mouseenter", onMouseEnter)
+      link.removeEventListener("mouseleave", onMouseLeave)
+      link.removeEventListener("click", onClick)
     })
   }
 
-  // Dismiss popover when tapping anywhere outside it (mobile only)
-  if (touch) {
-    document.addEventListener("click", (e: MouseEvent) => {
-      const target = e.target as HTMLElement
-      if (!target.closest(".popover") && !target.closest("a.internal")) {
-        clearActivePopover()
-      }
-    }, true)
+  // Tapping anywhere else dismisses the card, so it never lingers on a phone.
+  const onDocumentClick = (event: MouseEvent) => {
+    const target = event.target as Element | null
+    if (target?.closest(".popover") || target?.closest("a.internal")) return
+    shownByTouch = null
+    clearActivePopover()
   }
+  document.addEventListener("click", onDocumentClick)
+  window.addCleanup(() => document.removeEventListener("click", onDocumentClick))
 })

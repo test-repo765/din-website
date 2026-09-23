@@ -1,3 +1,758 @@
 @use "./base.scss";
 
-// put your custom CSS here!
+/* ============================================================
+   İlâhîler — a reading-first theme.
+
+   Quartz appends this file last when it assembles index.css, so at equal
+   specificity these rules win over the component stylesheets. Only the
+   `--custom-*` variables and the rules below need editing to re-skin the site.
+   ============================================================ */
+
+:root {
+  --custom-serif:
+    "Source Serif 4", "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --custom-measure: 34em; /* line length for poetry */
+  --custom-radius: 12px;
+  --custom-shadow: 0 1px 2px rgba(20, 18, 16, 0.06), 0 8px 24px rgba(20, 18, 16, 0.06);
+}
+
+/* ============================================================
+   1. Type scale
+   The whole stylesheet is rem-based, so the root size is the single lever
+   for "make everything bigger". TextSize writes an inline override on
+   <html> for visitors who want more.
+   ============================================================ */
+html {
+  font-size: 19px;
+  /* base.scss sets `text-size-adjust: none`, which switches OFF the mobile
+     browser's own text inflation. Put it back. */
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--headerFont);
+  /* --darkgray on --light is the body-text pair; raise the weight a touch so
+     thin strokes survive on cheap screens. */
+  font-weight: 400;
+}
+
+/* The hymns themselves are set in a serif — the reading surface. */
+article {
+  font-family: var(--custom-serif);
+}
+
+/* ============================================================
+   2. Focus. Quartz removes focus outlines in four places and replaces none
+   of them (a WCAG 2.4.7 failure, and the single worst thing here for a
+   keyboard or low-vision user). Restore a loud, consistent ring.
+   ============================================================ */
+:focus {
+  outline: none; /* keep mouse clicks quiet… */
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible,
+.result-card:focus-visible,
+.search-bar:focus-visible,
+.explorer-content a:focus-visible,
+.explorer-toggle:focus-visible,
+.title-button:focus-visible {
+  outline: 3px solid var(--secondary) !important;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Skip link — Quartz ships none. */
+a.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 999;
+  padding: 0.75rem 1rem;
+  background: var(--light);
+  color: var(--dark);
+  border: 2px solid var(--secondary);
+  border-radius: var(--custom-radius);
+
+  &:focus {
+    left: 1rem;
+    top: 1rem;
+  }
+}
+
+/* ============================================================
+   3. Layout. The right sidebar is empty everywhere now, so reclaim its
+   column and give the reading column a comfortable measure.
+   ============================================================ */
+.sidebar.right:empty {
+  display: none;
+}
+
+.page {
+  max-width: 1500px;
+}
+
+@media all and (min-width: 1200px) {
+  .page > #quartz-body {
+    grid-template-columns: 340px minmax(0, 1fr);
+    grid-template-areas:
+      "grid-sidebar-left grid-header"
+      "grid-sidebar-left grid-center"
+      "grid-sidebar-left grid-sidebar-right"
+      "grid-sidebar-left grid-footer";
+  }
+
+  .page > #quartz-body .center {
+    /* Widening the shell must not widen the text — long lines are the classic
+       readability mistake. */
+    max-width: 62rem;
+    padding-right: 2rem;
+  }
+}
+
+/* ============================================================
+   4. Reading mode. The component already toggles reader-mode="on" on <html>
+   and ships only a sidebar fade; make it a genuine large-type mode.
+   ============================================================ */
+:root[reader-mode="on"] {
+  font-size: 23px;
+
+  .sidebar.left,
+  .sidebar.right,
+  .breadcrumbs,
+  .content-meta {
+    display: none;
+  }
+
+  .page > #quartz-body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "grid-header"
+      "grid-center"
+      "grid-footer";
+  }
+
+  .page > #quartz-body .center {
+    max-width: 40rem;
+    margin-inline: auto;
+  }
+
+  article p {
+    max-width: var(--custom-measure);
+  }
+}
+
+/* ============================================================
+   5. The hymn itself.
+   Each stanza is a <p> whose lines are separated by <br> after
+   Plugin.HardLineBreaks(). Verse wants air: generous leading, clear stanza
+   breaks, and a measure short enough that the eye doesn't lose its place.
+   ============================================================ */
+article {
+  p {
+    font-size: 1.15rem;
+    line-height: 1.95;
+    max-width: var(--custom-measure);
+
+    /* Stanzas are separated by blank lines in the source → separate <p>s. */
+    & + p {
+      margin-top: 1.55em;
+    }
+  }
+
+  /* Lines inside a stanza carry a <br>; keep them from being hyphenated. */
+  p {
+    hyphens: none;
+    overflow-wrap: break-word;
+  }
+}
+
+/* Attribution and annotation lines ((Yazan: …), (Makam: …), (beşli kafiye)).
+   Classified at build time by quartz/plugins/din/hymns.ts. */
+article p.hymn-meta {
+  font-family: var(--headerFont);
+  font-size: 0.94rem;
+  line-height: 1.6;
+  color: var(--gray);
+  /* The vault now carries its own literal `---` above the attribution block,
+     which renders as <hr/>. No border-top here — that would double the rule.
+     Just close the gap the <hr> leaves. */
+  margin-top: 0.5em;
+
+  & + p.hymn-meta {
+    margin-top: 0.2em;
+  }
+}
+
+/* The <hr> that separates verse from attribution, tightened up so the two read
+   as one block rather than two unrelated rules. */
+article > hr:has(+ p.hymn-meta) {
+  margin-top: 2.6rem;
+  margin-bottom: 0.8rem;
+}
+
+/* ============================================================
+   5b. Lügatçe lookups
+   The per-hymn glossary is authored inside Obsidian's %% comment syntax on
+   purpose: it is the author's working definition list and must NOT be printed
+   on the hymn page. `%%` comments are stripped by ObsidianFlavoredMarkdown, and
+   quartz/plugins/din/hymns.ts leaves them alone.
+
+   Lookups happen through the inline [[Lugat#…]] links instead, and the popover
+   is the whole point of them on a phone. Two upstream defaults had to go:
+   Quartz hard-disables popovers below 800px, and it only ever binds
+   mouseenter — so on a touch device a tap just navigated away and the
+   definition was unreachable.
+   ============================================================ */
+
+.popover > .popover-inner {
+  /* upstream: font-size: initial, i.e. 16px regardless of the site scale */
+  font-size: 1.05rem;
+  line-height: 1.6;
+  border-radius: var(--custom-radius);
+  box-shadow: var(--custom-shadow);
+}
+
+.popover {
+  h1,
+  h2,
+  h3 {
+    font-size: 1.15rem;
+    line-height: 1.3;
+    margin-top: 0;
+    color: var(--secondary);
+  }
+
+  p {
+    font-family: var(--custom-serif);
+    margin-bottom: 0.5em;
+  }
+
+  /* rehype-autolink-headings appends a link icon to every heading; the
+     isolated glossary entry should not sprout one. */
+  a[role="anchor"] {
+    display: none;
+  }
+}
+
+@media all and (max-width: 800px) {
+  /* Upstream sets `display: none !important` here; re-enable, because a
+     tap-to-look-up card is the main way this site is meant to be read. */
+  .popover {
+    display: block !important;
+  }
+
+  .popover > .popover-inner {
+    width: min(30rem, calc(100vw - 1.25rem));
+    max-height: min(20rem, 55vh);
+    padding: 0.9rem 1rem 1.1rem;
+  }
+}
+
+/* Touch devices: teach the second-tap gesture, since nothing on screen
+   suggests the link is still a link. */
+@media all and (hover: none) {
+  .popover > .popover-inner::after {
+    content: "Tam sözlük için tekrar dokunun";
+    display: block;
+    margin-top: 0.9rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid var(--lightgray);
+    font-family: var(--headerFont);
+    font-size: 0.85rem;
+    color: var(--gray);
+  }
+}
+
+/* The article title on a hymn page: big, centred, with room to breathe. */
+body:not([data-slug="index"]) .center > article > h1,
+body:not([data-slug="index"]) .article-title {
+  line-height: 1.25;
+  margin-bottom: 1.6rem;
+}
+
+/* ============================================================
+   6. Previous / next hymn
+   ============================================================ */
+.hymn-nav {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin: 0.5rem 0 0;
+
+  @media all and (max-width: 800px) {
+    grid-template-columns: 1fr;
+    margin-bottom: 0.5rem;
+  }
+}
+
+.hymn-step {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--lightgray);
+  border-radius: var(--custom-radius);
+  background: var(--light);
+  text-decoration: none !important;
+  min-height: 3.6rem;
+  justify-content: center;
+
+  &.hymn-step-next {
+    text-align: right;
+  }
+
+  &:hover:not(.is-disabled) {
+    border-color: var(--secondary);
+    background: var(--highlight);
+  }
+
+  &.is-disabled {
+    opacity: 0.4;
+    border-style: dashed;
+  }
+}
+
+.hymn-step-label {
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--gray);
+}
+
+.hymn-step-title {
+  font-family: var(--custom-serif);
+  font-size: 1rem;
+  line-height: 1.35;
+  color: var(--secondary);
+}
+
+/* Second (bottom) instance sits after the article. */
+.page-footer .hymn-nav {
+  margin-top: 3rem;
+}
+
+/* ============================================================
+   7. Text-size control
+   ============================================================ */
+.textsize {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex: 0 0 auto;
+}
+
+.textsize-btn {
+  font-family: var(--headerFont);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1;
+  min-width: 2.2rem;
+  height: 2.2rem;
+  padding: 0 0.4rem;
+  color: var(--darkgray);
+  background: transparent;
+  border: 1px solid var(--lightgray);
+  border-radius: 8px;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--secondary);
+    color: var(--secondary);
+    background: var(--highlight);
+  }
+}
+
+/* ============================================================
+   8. Search — the primary way in, so make it look like it.
+   ============================================================ */
+.search-button {
+  max-width: none;
+  width: 100%;
+  height: 2.75rem;
+  border: 1px solid var(--lightgray);
+  border-radius: var(--custom-radius);
+  background: var(--light);
+  color: var(--darkgray);
+  justify-content: flex-start;
+
+  & p {
+    color: var(--darkgray);
+    font-size: 1rem;
+    font-weight: 500;
+  }
+
+  &:hover {
+    border-color: var(--secondary);
+    background: var(--highlight);
+  }
+}
+
+.search-bar {
+  font-size: 1.3em;
+}
+
+.search-space {
+  width: min(92%, 46rem);
+  margin-top: 8vh;
+}
+
+.result-card {
+  padding: 1rem 1.1rem;
+
+  .card-title {
+    font-size: 1.05rem;
+    line-height: 1.4;
+  }
+
+  .card-description {
+    font-size: 0.95rem;
+    line-height: 1.6;
+  }
+}
+
+/* ============================================================
+   9. Explorer
+   ============================================================ */
+.explorer {
+  button.title-button h2,
+  .fold {
+    font-size: 1rem;
+  }
+
+  .explorer-content {
+    font-size: 0.98rem;
+
+    ul li a {
+      /* Bigger tap targets. MUST be `block`, not `inline-block`: an inline-block
+         shrinks to the width of its text, so the hover/click target is only as
+         wide as the title. Long titles then respond and short ones don't, and
+         hovering anywhere in the empty space to the right of a title hits dead
+         space — the pointer has to line up with the start of the text to make
+         the pane scroll. `block` spans the full row width, which is what a
+         navigation list wants. */
+      display: block;
+      padding: 0.28rem 0;
+      line-height: 1.5;
+    }
+  }
+}
+
+/* ============================================================
+   10. Chrome
+   ============================================================ */
+footer {
+  /* upstream: opacity: .7 — an instant contrast failure */
+  opacity: 1;
+  color: var(--gray);
+  font-size: 0.9rem;
+}
+
+.breadcrumbs {
+  font-size: 0.95rem;
+}
+
+/* The folder listing prints a filesystem mtime next to every hymn, sorted by
+   it. Nothing about that helps someone looking for a hymn. */
+.page-listing .meta {
+  display: none;
+}
+
+.page-listing .section-ul {
+  grid-template-columns: 1fr;
+}
+
+/* On /ilahiler/ the A–Z index replaces the default listing. */
+body[data-slug="ilahiler/index"] .page-listing {
+  display: none;
+}
+
+/* The home page supplies its own hero, heading and copy. */
+body[data-slug="index"] {
+  .center > article,
+  .center > hr,
+  .page-footer {
+    display: none;
+  }
+}
+
+@media all and (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ============================================================
+   11. Home page
+   ============================================================ */
+.home {
+  padding-bottom: 2rem;
+}
+
+.home-hero {
+  text-align: center;
+  padding: 1rem 0 2rem;
+  border-bottom: 1px solid var(--lightgray);
+  margin-bottom: 2rem;
+}
+
+.home-eyebrow {
+  font-size: 0.85rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tertiary);
+  margin: 0 0 0.4rem;
+}
+
+.home-title {
+  font-size: 3rem;
+  line-height: 1.1;
+  margin: 0 0 0.6rem;
+  letter-spacing: -0.01em;
+}
+
+.home-lede {
+  font-family: var(--custom-serif);
+  font-size: 1.15rem;
+  line-height: 1.7;
+  max-width: 34rem;
+  margin: 0 auto 1.8rem;
+  color: var(--darkgray);
+}
+
+.home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+
+  @media all and (max-width: 800px) {
+    flex-direction: column;
+  }
+}
+
+.home-search,
+.home-random {
+  font-family: var(--headerFont);
+  font-size: 1.1rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.9rem 1.4rem;
+  border-radius: var(--custom-radius);
+  cursor: pointer;
+  border: 2px solid var(--secondary);
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.home-search {
+  background: var(--secondary);
+  color: var(--light);
+
+  &:hover {
+    background: var(--tertiary);
+    border-color: var(--tertiary);
+  }
+}
+
+.home-random {
+  background: transparent;
+  color: var(--secondary);
+
+  &:hover {
+    background: var(--highlight);
+  }
+}
+
+.home-action-icon {
+  font-size: 1.1em;
+  line-height: 1;
+}
+
+.home-count {
+  margin: 1.4rem 0 0;
+  color: var(--gray);
+  font-size: 0.95rem;
+}
+
+.home-section-title {
+  font-size: 1.05rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gray);
+  margin: 0 0 0.9rem;
+}
+
+.home-browse {
+  text-align: center;
+  margin: 2rem 0 0;
+}
+
+.home-browse-link {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--secondary);
+}
+
+/* ============================================================
+   12. Alphabet
+   ============================================================ */
+.letter-grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(3.2rem, 1fr));
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0 0 1.5rem;
+}
+
+.letter-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1 / 1;
+  min-height: 3.2rem;
+  font-family: var(--headerFont);
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--secondary);
+  background: var(--light);
+  border: 1px solid var(--lightgray);
+  border-radius: var(--custom-radius);
+  text-decoration: none !important;
+
+  &:hover {
+    border-color: var(--secondary);
+    background: var(--highlight);
+  }
+
+  &.is-empty {
+    color: var(--gray);
+    opacity: 0.35;
+    border-style: dashed;
+    cursor: default;
+  }
+}
+
+/* Compact variant used as the sticky jump bar on /ilahiler/ */
+.letter-grid-compact {
+  grid-template-columns: repeat(auto-fill, minmax(2.4rem, 1fr));
+  gap: 0.35rem;
+  margin-bottom: 2rem;
+
+  .letter-tile {
+    min-height: 2.4rem;
+    font-size: 1.05rem;
+    border-radius: 8px;
+  }
+}
+
+.az-jump {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--light);
+  padding: 0.9rem 0 0.4rem;
+  border-bottom: 1px solid var(--lightgray);
+  margin-bottom: 1.5rem;
+}
+
+/* The A–Z jump bar is `position: sticky`, and sticky was silently dead here.
+   base.scss sets `html { overflow-x: hidden }` (line 10), which makes <html> a
+   scroll container and kills sticky for every descendant. That rule exists to
+   hide the horizontal overflow caused by `width: 100vw` two lines below it —
+   and 100vw is itself the problem: it includes the vertical scrollbar, so it is
+   always wider than the viewport by ~15px on desktop.
+
+   Fix the cause rather than the symptom: size <html> to 100% of the viewport
+   (scrollbar excluded) and drop overflow-x entirely. Nothing in this corpus
+   needs 100vw — the only genuinely wide content is tab-indented verse, and
+   quartz/plugins/din/hymns.ts normalises that to line breaks at build time.
+
+   NB: `overflow-x: clip` would be the more defensive choice, but Quartz pipes
+   index.css through lightningcss with a safari 15.6 target (see
+   componentResources.ts), and 15.6 predates `clip` — lightningcss silently
+   DROPS the declaration, so the rule appears to do nothing. Avoid it here. */
+html {
+  width: 100%;
+  overflow-x: visible;
+}
+
+/* ============================================================
+   13. A–Z index
+   ============================================================ */
+.az-index {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.az-group {
+  /* Leaves room under the sticky jump bar when an anchor is followed. */
+  scroll-margin-top: 9rem;
+  margin-bottom: 1.75rem;
+}
+
+.az-letter {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-size: 1.6rem;
+  margin: 0 0 0.4rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 2px solid var(--lightgray);
+  color: var(--secondary);
+}
+
+.az-letter-count {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--gray);
+}
+
+.az-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  columns: 2;
+  column-gap: 2rem;
+
+  @media all and (max-width: 800px) {
+    columns: 1;
+  }
+
+  li {
+    break-inside: avoid;
+  }
+}
+
+.az-link {
+  font-family: var(--custom-serif);
+  font-size: 1.05rem;
+  line-height: 1.5;
+  display: block;
+  padding: 0.3rem 0;
+  color: var(--darkgray);
+  text-decoration: none;
+
+  &:hover {
+    color: var(--secondary);
+    text-decoration: underline;
+  }
+}

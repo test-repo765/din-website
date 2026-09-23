@@ -150,7 +150,10 @@ function createRouter() {
     window.addEventListener("click", async (event) => {
       const { url } = getOpts(event) ?? {}
       // dont hijack behaviour, just let browser act normally
-      if (!url || event.ctrlKey || event.metaKey) return
+      // `defaultPrevented` means another handler already claimed this click —
+      // the popover uses it so that on a touch device the first tap on a
+      // [[Lugat#term]] link shows the definition and the second one navigates.
+      if (!url || event.ctrlKey || event.metaKey || event.defaultPrevented) return
       event.preventDefault()
 
       if (isSamePage(url) && url.hash) {
