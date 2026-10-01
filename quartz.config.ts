@@ -41,6 +41,8 @@ const config: QuartzConfig = {
       "Sohbetlerdeki ilahiler.md",
       "note template and other things.md",
       "Lugat-variations.md",
+      // Working notes about the site itself — not for readers.
+      "structuring-the-site.md",
     ],
     defaultDateType: "modified",
     theme: {
