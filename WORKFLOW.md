@@ -29,6 +29,17 @@ cd ~/Projects/quartz-din
 ln -s ~/Projects/din-vault content
 ```
 
+## Commands
+
+```
+any edit to vault:      gitpushdin
+update website:         publishdinsite
+any edit to the site:   gitpushdinquartz
+```
+
+`publishdinsite` is the only one that changes what visitors see. The other two
+are backups.
+
 ## Daily flow
 
 1. Edit poems in Obsidian.
